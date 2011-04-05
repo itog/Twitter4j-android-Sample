@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Twitter4jSample</string>
+    <string name="label_disconnect">Disconnect</string>
+    <string name="label_connect">Connect to Twitter</string>
+</resources>
