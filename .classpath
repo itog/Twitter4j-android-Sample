@@ -3,6 +3,7 @@
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="src" path="gen"/>
 	<classpathentry kind="con" path="com.android.ide.eclipse.adt.ANDROID_FRAMEWORK"/>
-	<classpathentry kind="lib" path="lib/twitter4j-core-android-2.2.1.jar"/>
-	<classpathentry kind="output" path="bin"/>
+	<classpathentry kind="lib" path="/Users/itog/devel/work_2012_1Q/android/Twitter4j-android-Sample/lib/twitter4j-core-android-2.2.5.jar"/>
+	<classpathentry kind="lib" path="lib/twitter4j-stream-android-2.2.5.jar"/>
+	<classpathentry kind="output" path="bin/classes"/>
 </classpath>

@@ -1,4 +1,4 @@
-package com.itog_lab.android.sample.twitter4j;
+package com.pigmal.android.ex.twitter4j;
 
 public class Const {
 	static String CONSUMER_KEY = "YOUR_CONSUMER_KEY";

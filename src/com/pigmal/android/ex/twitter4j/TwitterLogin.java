@@ -1,4 +1,4 @@
-package com.itog_lab.android.sample.twitter4j;
+package com.pigmal.android.ex.twitter4j;
 
 import android.app.Activity;
 import android.content.Intent;
@@ -13,7 +13,7 @@ public class TwitterLogin extends Activity {
 		super.onCreate(bundle);
 		setContentView(R.layout.twitter_login);
 
-		WebView webView = (WebView) findViewById(R.id.twitterlogin);
+		WebView webView = (WebView) findViewById(R.id.twitterLoginWeb);
 		WebSettings webSettings = webView.getSettings();
 		webSettings.setJavaScriptEnabled(true);
 		webView.setWebViewClient(new WebViewClient() {
