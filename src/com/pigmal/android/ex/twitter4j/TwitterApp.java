@@ -16,14 +16,12 @@ import twitter4j.auth.RequestToken;
 import twitter4j.conf.Configuration;
 import twitter4j.conf.ConfigurationBuilder;
 import android.app.Activity;
-import android.app.ProgressDialog;
-import android.content.Context;
-import android.content.DialogInterface;
-import android.content.DialogInterface.OnCancelListener;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.os.AsyncTask;
+import android.content.SharedPreferences.Editor;
+import android.net.Uri;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
@@ -31,81 +29,59 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-public class MainActivity extends Activity implements OnClickListener {
-	private Context context;
+public class TwitterApp extends Activity implements OnClickListener {
+	private static final String TAG = "T4JSample";
 
-	private Button connectButton;
+	private Button buttonLogin;
 	private Button getTweetButton;
 	private TextView tweetText;
 	private ScrollView scrollView;
 
-	private Twitter twitter;
-	private RequestToken requestToken;
-	private TwitterStream twitterStream;
+	private static Twitter twitter;
+	private static RequestToken requestToken;
+	private static SharedPreferences mSharedPreferences;
+	private static TwitterStream twitterStream;
 	private boolean running = false;
-
-	/**
-	 * check if the account is authorized
-	 * @return
-	 */
-	private boolean isConnected() {
-		SharedPreferences pref = getSharedPreferences(Const.PREFERENCE_NAME, MODE_PRIVATE);
-		return pref.getBoolean(Const.PREF_KEY_CONNECTED, false);
-	}
 	
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.main);
-		context = this;
-
+		
+		mSharedPreferences = getSharedPreferences(Const.PREFERENCE_NAME, MODE_PRIVATE);
 		scrollView = (ScrollView)findViewById(R.id.scrollView);
 		tweetText =(TextView)findViewById(R.id.tweetText);
 		getTweetButton = (Button)findViewById(R.id.getTweet);
 		getTweetButton.setOnClickListener(this);
-		connectButton = (Button)findViewById(R.id.twitterLogin);
-		if (isConnected()) {
-			connectButton.setText(R.string.label_disconnect);
-			getTweetButton.setEnabled(true);
-		} else {
-			connectButton.setText(R.string.label_connect);
-		}
-		connectButton.setOnClickListener(this);		
-	}
-
-	protected void onActivityResult(int requestCode, int resultCode, Intent intent) {
-		if (resultCode == RESULT_OK) {
-			super.onActivityResult(requestCode, resultCode, intent);
-
-			AccessToken accessToken = null;
-			try {
-				accessToken = twitter.getOAuthAccessToken(requestToken, intent
-						.getExtras().getString(Const.IEXTRA_OAUTH_VERIFIER));
-
-				SharedPreferences pref = getSharedPreferences(Const.PREFERENCE_NAME, MODE_PRIVATE);
-
-				SharedPreferences.Editor editor = pref.edit();
-				editor.putString(Const.PREF_KEY_TOKEN, accessToken.getToken());
-				editor.putString(Const.PREF_KEY_SECRET, accessToken.getTokenSecret());
-				editor.putBoolean(Const.PREF_KEY_CONNECTED, true);
-				editor.commit();
-
-				Toast.makeText(context, "authorized", Toast.LENGTH_SHORT).show();
-				connectButton.setText(R.string.label_disconnect);
-				getTweetButton.setEnabled(true);
-			} catch (TwitterException e) {
-				e.printStackTrace();
+		buttonLogin = (Button) findViewById(R.id.twitterLogin);
+		buttonLogin.setOnClickListener(this);
+		
+		/**
+		 * Handle OAuth Callback
+		 */
+		Uri uri = getIntent().getData();
+		if (uri != null && uri.toString().startsWith(Const.CALLBACK_URL)) {
+			String verifier = uri.getQueryParameter(Const.IEXTRA_OAUTH_VERIFIER);
+            try { 
+                AccessToken accessToken = twitter.getOAuthAccessToken(requestToken, verifier); 
+                Editor e = mSharedPreferences.edit();
+                e.putString(Const.PREF_KEY_TOKEN, accessToken.getToken()); 
+                e.putString(Const.PREF_KEY_SECRET, accessToken.getTokenSecret()); 
+                e.commit();
+	        } catch (Exception e) { 
+	                Log.e(TAG, e.getMessage()); 
+	                Toast.makeText(this, e.getMessage(), Toast.LENGTH_LONG).show(); 
 			}
-		}
+        }		
 	}
-
-
+	
 	protected void onResume() {
 		super.onResume();
+
 		if (isConnected()) {
-			SharedPreferences pref = getSharedPreferences(Const.PREFERENCE_NAME, MODE_PRIVATE);
-			String oauthAccessToken = pref.getString(Const.PREF_KEY_TOKEN, "");
-			String oAuthAccessTokenSecret = pref.getString(Const.PREF_KEY_SECRET, "");
+			String oauthAccessToken = mSharedPreferences.getString(Const.PREF_KEY_TOKEN, "");
+			String oAuthAccessTokenSecret = mSharedPreferences.getString(Const.PREF_KEY_SECRET, "");
+
 			ConfigurationBuilder confbuilder = new ConfigurationBuilder();
 			Configuration conf = confbuilder
 								.setOAuthConsumerKey(Const.CONSUMER_KEY)
@@ -114,92 +90,58 @@ public class MainActivity extends Activity implements OnClickListener {
 								.setOAuthAccessTokenSecret(oAuthAccessTokenSecret)
 								.build();
 			twitterStream = new TwitterStreamFactory(conf).getInstance();
+			
+			buttonLogin.setText(R.string.label_disconnect);
+			getTweetButton.setEnabled(true);
+		} else {
+			buttonLogin.setText(R.string.label_connect);
 		}
 	}
-	
-	private Boolean connectTwitter() {
-		ConfigurationBuilder confbuilder = new ConfigurationBuilder();
-		Configuration conf = confbuilder
-							.setOAuthConsumerKey(Const.CONSUMER_KEY)
-							.setOAuthConsumerSecret(Const.CONSUMER_SECRET)
-							.build();
 
-		twitter = new TwitterFactory(conf).getInstance();
-		twitter.setOAuthAccessToken(null);
+	/**
+	 * check if the account is authorized
+	 * @return
+	 */
+	private boolean isConnected() {
+		return mSharedPreferences.getString(Const.PREF_KEY_TOKEN, null) != null;
+	}
 
-		boolean ret = false;
+	private void askOAuth() {
+		ConfigurationBuilder configurationBuilder = new ConfigurationBuilder();
+		configurationBuilder.setOAuthConsumerKey(Const.CONSUMER_KEY);
+		configurationBuilder.setOAuthConsumerSecret(Const.CONSUMER_SECRET);
+		Configuration configuration = configurationBuilder.build();
+		twitter = new TwitterFactory(configuration).getInstance();
+		
 		try {
 			requestToken = twitter.getOAuthRequestToken(Const.CALLBACK_URL);
-
-			Intent intent = new Intent(this, TwitterLogin.class);
-			intent.putExtra(Const.IEXTRA_AUTH_URL, requestToken.getAuthorizationURL());
-
-			this.startActivityForResult(intent, 0);
-			ret = true;
+			Toast.makeText(this, "Please authorize this app!", Toast.LENGTH_LONG).show();
+			this.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(requestToken.getAuthenticationURL())));
 		} catch (TwitterException e) {
 			e.printStackTrace();
 		}
-		return ret;
 	}
 
-	public void disconnectTwitter() {
-		SharedPreferences pref = getSharedPreferences(Const.PREFERENCE_NAME, MODE_PRIVATE);
-
-		SharedPreferences.Editor editor = pref.edit();
+	/**
+	 * Remove Token, Secret from preferences
+	 */
+	private void disconnectTwitter() {
+		SharedPreferences.Editor editor = mSharedPreferences.edit();
 		editor.remove(Const.PREF_KEY_TOKEN);
 		editor.remove(Const.PREF_KEY_SECRET);
-		editor.remove(Const.PREF_KEY_CONNECTED);
 
 		editor.commit();
 	}
-
-	private class ConnectTask extends AsyncTask<Void, Void, Boolean> {
-		private ProgressDialog progressDialog;
-
-		@Override
-		protected void onPreExecute() {
-			super.onPreExecute();
-			progressDialog = new ProgressDialog(context);
-			progressDialog.setMessage("doing...");
-			progressDialog.setOnCancelListener(new OnCancelListener() {
-				@Override
-				public void onCancel(DialogInterface dialog) {
-					cancel(false);
-				}
-			});
-			progressDialog.show();
-		}
-
-		@Override
-		protected Boolean doInBackground(Void... v) {
-			return connectTwitter();
-		}
-
-		@Override
-		protected void onProgressUpdate(Void... v) {
-			//TODO show progress
-		}
-
-		@Override
-		protected void onPostExecute(Boolean isConnected) {
-			if (isConnected()) {
-				connectButton.setText(R.string.label_disconnect);
-			} else {
-				Toast.makeText(context, "Error to authorize", Toast.LENGTH_LONG).show();
-			}
-			progressDialog.dismiss();
-		}
-	}
-
+	
 	@Override
 	public void onClick(View v) {
 		switch (v.getId()) {
 		case R.id.twitterLogin:
 			if (isConnected()) {
 				disconnectTwitter();
-				connectButton.setText(R.string.label_connect);
+				buttonLogin.setText(R.string.label_connect);
 			} else {
-				new ConnectTask().execute();
+				askOAuth();
 			}
 			break;
 		case R.id.getTweet:
@@ -221,8 +163,7 @@ public class MainActivity extends Activity implements OnClickListener {
 	}
 
 	public void startStreamingTimeline() {
-
-        UserStreamListener listener = new UserStreamListener() {
+	    UserStreamListener listener = new UserStreamListener() {
 
 			@Override
 			public void onDeletionNotice(StatusDeletionNotice arg0) {
@@ -341,7 +282,7 @@ public class MainActivity extends Activity implements OnClickListener {
 			public void onUserProfileUpdate(User arg0) {
 				// TODO Auto-generated method stub
 			}
-        };
+	    };
         twitterStream.addListener(listener);
         twitterStream.user();
 	}
