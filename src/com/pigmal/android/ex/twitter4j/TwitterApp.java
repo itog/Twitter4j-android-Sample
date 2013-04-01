@@ -1,6 +1,7 @@
 package com.pigmal.android.ex.twitter4j;
 
 import twitter4j.DirectMessage;
+import twitter4j.StallWarning;
 import twitter4j.Status;
 import twitter4j.StatusDeletionNotice;
 import twitter4j.Twitter;
@@ -229,11 +230,6 @@ public class TwitterApp extends Activity implements OnClickListener {
 			}
 
 			@Override
-			public void onRetweet(User arg0, User arg1, Status arg2) {
-				// TODO Auto-generated method stub
-			}
-
-			@Override
 			public void onUnblock(User arg0, User arg1) {
 				// TODO Auto-generated method stub
 			}
@@ -281,6 +277,12 @@ public class TwitterApp extends Activity implements OnClickListener {
 			@Override
 			public void onUserProfileUpdate(User arg0) {
 				// TODO Auto-generated method stub
+			}
+
+			@Override
+			public void onStallWarning(StallWarning arg0) {
+				// TODO Auto-generated method stub
+				
 			}
 	    };
         twitterStream.addListener(listener);
